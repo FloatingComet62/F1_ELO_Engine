@@ -89,11 +89,23 @@ A driver in dirty air as they are fighting for points will have a lower laptime 
 - Compensate for `driver_space`
   > driver_space: How much gap is in front and back
 
+
+**How do we compare different tyre types?**
+The solution i came up with is that we CAN compare them, because if a driver puts on mediums while their team mate put on softs, then at some point they will be on softs and their team mate on mediums, so it averages out.
+if you compare different # of pitstops, the overall pace at some point would be obviously higher
+
 # Second method
 ## Formula for `driver_space`
-`a * <gap-in-front> + b * <gap-in-back>`
-for now, i am going to set a=b=1, but in the future I will tune these 2 variables.
+$$\frac{a(1-e^{-\text{Gap in front}}) + b(1-e^{-\text{Gap in back}})}{a+b}$$
+The timings are in seconds
+for now, i am going to set a=1 & b=4, but in the future I will tune these 2 variables.
 If defending is harder, then b > a
 If attacking is harder, then a > b
 
 Or something like that.
+
+## New formula for Score
+$$\displaylines{
+100 * \text{Drive Score} * (1-\text{Drive Space}) \\ 
+\text{Lap Score} = 100 * \frac{\sum\text{Best Car Sectors}}{\text{Lap Time}} * (1-\frac{a(1-e^{-\text{Gap in front}}) + b(1-e^{-\text{Gap in back}})}{a+b})
+}$$
