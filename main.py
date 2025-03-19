@@ -2,18 +2,24 @@ import fastf1
 import fastf1.plotting
 import pickle
 from team import TeamBuilder
-from helper import avg, variance
+from helper import avg, variance, str_session_data
+from rating import RatingManager
 
-CACHE_FILE = "space_data_brazil.dat"
-session = fastf1.get_session(2024, 21, 'R')
+RATING_FILE = "rating.dat"
+SESSION = (2024, 21, 'R')
+SPACE_DATA_FILE = f"space_data_{str_session_data(SESSION)}.dat"
+
+rating_manager = RatingManager(RATING_FILE)
+session = fastf1.get_session(*SESSION)
 session.load()
 
 
-def pace_score(drive_score, driver_space, is_wet):
-    if is_wet:
-        return 100 * drive_score
+def position_to_points(pos):
+    return ([25, 18, 15, 12, 10, 8, 6, 4, 2, 1] + [0] * 10)[int(pos - 1)]
 
-    return 100 * drive_score * (1 - driver_space)
+
+def pace_score(drive_score, driver_space):
+    return drive_score * (1 - driver_space**1/3)
 
 
 team_builders = {}
@@ -30,14 +36,11 @@ for key in team_builders.keys():
     teams[key] = team_builders[key].build()
 
 session_laps = []
-is_wet = []
 for i in range(session.total_laps + 1):
     session_laps.append(session.laps[session.laps["LapNumber"] == i])
-    is_wet.append(session.laps.pick_laps(i).get_weather_data()['Rainfall'].any())
-
 
 try:
-    with open(CACHE_FILE, "rb") as f:
+    with open(SPACE_DATA_FILE, "rb") as f:
         spaces_data = pickle.load(f)
 except Exception as _:
     print("Spaces Cache not found")
@@ -52,7 +55,7 @@ for team in teams.values():
         drive_score = achieved_time / driver1_time
         scores.append(drive_score)
         driver_space = team.driver1.get_space(spaces_data, session_laps[lap], lap)
-        send_data = (team.driver1.id, pace_score(drive_score, driver_space, is_wet[lap]))
+        send_data = (team.driver1.id, pace_score(drive_score, driver_space))
         if lap not in laps:
             laps[lap] = [send_data]
             continue
@@ -66,7 +69,7 @@ for team in teams.values():
         drive_score = achieved_time / driver2_time
         scores.append(drive_score)
         driver_space = team.driver2.get_space(spaces_data, session_laps[lap], lap)
-        send_data = (team.driver2.id, pace_score(drive_score, driver_space, is_wet[lap]))
+        send_data = (team.driver2.id, pace_score(drive_score, driver_space))
         if lap not in laps:
             laps[lap] = [send_data]
             continue
@@ -76,18 +79,25 @@ for team in teams.values():
     score_avg = avg(scores)
     v_avg = variance(scores) * score_avg
     print(f"{team.driver2.id} analyzed [avg: {score_avg:.2%}, variance: {v_avg:.3%}]")
-    with open(CACHE_FILE, "wb") as f:
-        pickle.dump(spaces_data, f)
-        print("Cache saved")
 
-net_net_score = []
 for (lap, net_score) in laps.items():
-    scores = list(map(lambda x: x[1], net_score))
-    net_net_score += scores
     net_score.sort(key=lambda x: x[1], reverse=True)
-    print(f"{lap}: {net_score[0][0]} ({net_score[0][1]:.2f}%) (net: {avg(scores):.2f}%)")
-print(f"net net: {avg(net_net_score):.2f}%")
+    scores = list(map(lambda x: x[1], net_score))
+    #rating_manager.send_lap_scores([*net_score])
+    print(f"{lap}: {net_score[0][0]} ({net_score[0][1]:.2%}) (net: {avg(scores):.2%})")
 
-with open(CACHE_FILE, "wb") as f:
+print(session.results)
+for team in teams.values():
+    driver1_points = position_to_points(team.driver1.data["Position"])
+    driver2_points = position_to_points(team.driver2.data["Position"])
+    diff = abs(driver1_points - driver2_points)
+    if driver1_points > driver2_points:
+        rating_manager.send_result_scores(team.driver1.id, team.driver2.id, diff)
+    else:
+        rating_manager.send_result_scores(team.driver2.id, team.driver1.id, diff)
+
+with open(SPACE_DATA_FILE, "wb") as f:
     pickle.dump(spaces_data, f)
     print("Cache saved")
+
+rating_manager.deinit()
