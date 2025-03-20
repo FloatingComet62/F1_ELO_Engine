@@ -1,7 +1,8 @@
+import numpy as np
 from fastf1 import get_session
 from team import TeamBuilder
 from pickle import load as binary_load, dump as binary_dump
-from helper import avg, variance, str_session_data
+from helper import avg, str_session_data
 
 
 def position_to_points(pos):
@@ -12,11 +13,22 @@ def pace_score(drive_score, driver_space):
     return drive_score * (1 - driver_space**1/3)
 
 
+def score_found(scores, driver):
+    for (scored_driver, _score) in scores:
+        if driver == scored_driver:
+            return True
+    return False
+
+
 class Session:
     def __init__(self, session_data):
         session = get_session(*session_data)
         session.load()
         self.space_data_file = f"space_data_{str_session_data(session_data)}.dat"
+        self.drivers = list(map(
+            lambda driver_num: session.get_driver(driver_num)["DriverId"],
+            session.drivers
+        ))
 
         team_builders = {}
         for driver_num in session.drivers:
@@ -51,6 +63,8 @@ class Session:
                 lap
             )
             send_data = (driver.id, pace_score(drive_score, driver_space))
+            if np.isnan(send_data[1]):
+                continue
             if lap not in self.laps:
                 self.laps[lap] = [send_data]
                 continue
@@ -63,10 +77,17 @@ class Session:
             self.calculate_lap_score(team.driver1, achieved_time)
             self.calculate_lap_score(team.driver2, achieved_time)
 
+    def fill_missing_drivers(self, scores):
+        for driver in self.drivers:
+            if score_found(scores, driver):
+                continue
+            scores.append((driver, 0))
+
     def run_elo_round_for_lap_scores(self, rating_manager):
         assert self.laps
 
         for (lap, net_score) in self.laps.items():
+            self.fill_missing_drivers(net_score)
             net_score.sort(key=lambda x: x[1], reverse=True)
             scores = list(map(lambda x: x[1], net_score))
             rating_manager.send_lap_scores([*net_score])
@@ -76,7 +97,7 @@ class Session:
         for team in self.teams.values():
             driver1_points = position_to_points(team.driver1.data["Position"])
             driver2_points = position_to_points(team.driver2.data["Position"])
-            diff = abs(driver1_points - driver2_points)
+            diff = abs(driver1_points - driver2_points) * 10
             if driver1_points > driver2_points:
                 rating_manager.send_result_scores(
                     team.driver1.id,
@@ -90,7 +111,7 @@ class Session:
                 diff
             )
 
-    def deinit(self):
+    def save(self):
         with open(self.space_data_file, "wb") as f:
             binary_dump(self.spaces_data, f)
             print("Cache saved")

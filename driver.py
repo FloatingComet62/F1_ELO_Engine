@@ -50,6 +50,7 @@ class Driver:
                 b * (1-math.exp(-spaces[1] / 1000))
             ) / (a+b)
 
+        print(f"Calculating space for {self.id} for Lap {lap_num}")
         position = int(lap_data[lap_data["DriverNumber"] == self.num]["Position"].iloc[0])
 
         ahead_lap = lap_data.pick_drivers(self.num)
@@ -76,3 +77,19 @@ class Driver:
             a * (1-math.exp(-spaces[0] / 1000)) +
             b * (1-math.exp(-spaces[1] / 1000))
         ) / (a+b)
+
+
+class DummyDriver:
+    def __init__(self, session):
+        self.session = session
+        self.id = 'void'
+        self.num = 0
+
+    def lap_time(self):
+        lap_times = []
+        for i in range(self.session.total_laps):
+            lap_times.append((i + 1, math.inf))
+        return lap_times
+
+    def get_space(self, _spaces_data, _lap_data, _lap_num):
+        return 1

@@ -1,23 +1,27 @@
 from helper import get_time
-from driver import Driver
+from driver import Driver, DummyDriver
 
 
 class TeamBuilder:
     def __init__(self, session, team_id):
         self.session = session
         self.team_id = team_id
+        self.driver1 = None
+        self.driver2 = None
 
     def add_driver(self, driver):
-        if "driver1" not in dir(self):
+        if not self.driver1:
             self.driver1 = Driver(self.session, driver)
             return
-        if "driver2" not in dir(self):
+        if not self.driver2:
             self.driver2 = Driver(self.session, driver)
             return
         # Todo: handle this scenaio
         raise ValueError("A team can't have more than 2 driver on a grid at a time")
 
     def build(self):
+        if not self.driver2:
+            self.driver2 = DummyDriver(self.session)
         return Team(self.session, self.team_id, self.driver1, self.driver2)
 
 

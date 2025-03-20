@@ -51,7 +51,7 @@ class RatingManager:
                 self.data[loser_driver_id]
             )
 
-    def deinit(self):
+    def save(self):
         print(self.data)
         with open(self.file_name, "wb") as f:
             pickle.dump(self.data, f)
