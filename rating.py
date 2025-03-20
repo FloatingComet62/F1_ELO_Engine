@@ -26,6 +26,7 @@ class RatingManager:
         return self.data[driver]
 
     def send_lap_scores(self, scores):
+        self.data['void'] = Rating()
         ordered_ratings = list(map(
             lambda x: {x[0]: self.get_rating(x[0])},
             scores
@@ -39,6 +40,7 @@ class RatingManager:
             loser_driver_id,
             point_diff,
     ):
+        self.data['void'] = Rating()
         self.get_rating(winner_driver_id)
         self.get_rating(loser_driver_id)
 

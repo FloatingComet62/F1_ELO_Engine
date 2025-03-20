@@ -10,7 +10,7 @@ def position_to_points(pos):
 
 
 def pace_score(drive_score, driver_space):
-    return drive_score * (1 - driver_space**1/3)
+    return drive_score * (1 - 0.3 * (driver_space**1/3))
 
 
 def score_found(scores, driver):
