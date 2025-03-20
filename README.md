@@ -106,6 +106,8 @@ Or something like that.
 
 ## New formula for Score
 $$\displaylines{
-100 * \text{Drive Score} * (1-\text{Drive Space}) \\ 
-\text{Lap Score} = 100 * \frac{\sum\text{Best Car Sectors}}{\text{Lap Time}} * (1-\frac{a(1-e^{-\text{Gap in front}}) + b(1-e^{-\text{Gap in back}})}{a+b})
+100 * \text{Drive Score} * (1-0.3*\text{Drive Space}^{1/3}) \\ 
+a = 1 \\
+b = 4 \\
+\text{Lap Score} = 100 * \frac{\sum\text{Best Car Sectors}}{\text{Lap Time}} * (1-0.3(\frac{a(1-e^{-\text{Gap in front}}) + b(1-e^{-\text{Gap in back}})}{a+b})^{1/3}
 }$$
